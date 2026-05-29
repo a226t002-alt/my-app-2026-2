@@ -1,27 +1,27 @@
-# Student Dashboard (Neo-Brutalism Style)
+# Campus Life Organizer
 
-HTML/CSS/JavaScriptのみで構築された、GitHub Pagesで公開可能な学生向けダッシュボードアプリです。
+HTML/CSS/JavaScriptのみで構築された、GitHub Pagesで公開可能な高機能な学生向けライフオーガナイザー（ダッシュボード）アプリです。
 
-## 機能
-- **Pomodoro Timer**: 25分/5分の切り替えが可能なタイマー。
-- **Task Manager**: Todoリスト。データはブラウザのLocalStorageに保存されます。
-- **GPA Tracker**: 成績と単位数からGPAを計算。
-- **Schedule**: 週間時間割の表示。
-- **Quick Notes**: 自由に書き込めるメモ帳（自動保存）。
-- **Weather**: Open-Meteo APIを使用した現在の天気の表示。
+## 主な機能
+- **今学期の時間割 (Timetable)**: 
+  - マスをタップして授業名、教室、担当教員、関連リンク（ZoomやLMS等）を簡単登録！
+  - 登録された授業からはワンクリックで関連リンクを開けます。
+- **課題・Todo (Tasks & Todo)**: 
+  - 課題名、期限、関連リンク、重要度（高・中・低）を指定してタスクを追加できます。
+  - 残り日数に応じて「間近！」「期限切れ！」が自動表示されます。
+- **メモ (Memos)**: 
+  - 自由に書き込める付箋スタイルのメモ帳。関連リンクも一緒に保存可能です。
+- **リンク集 (Links)**: 
+  - 大学のポータルサイトや図書館など、よく使うサイトのリンクをカード形式で綺麗にまとめて管理できます。
 
-## デザイン
-個性的な **Neo-Brutalism** スタイルを採用しています。
-- 太い黒枠（Border）
-- 強いドロップシャドウ
-- ビビッドな配色
+## デザインと特徴
+- **大人可愛いデザイン**: 淡いピンクを基調とした、清潔感と親しみやすさのある洗練されたUI。
+- **データ永続化**: 入力したすべてのデータはブラウザの `LocalStorage` に自動保存されるため、ページを閉じても消えません。
+- **レスポンシブ対応**: スマートフォンやタブレットからでも快適に利用可能です。
 
 ## GitHub Pagesへの公開手順
-1. このリポジトリをGitHubにプッシュします。
-2. GitHubリポジトリの `Settings` > `Pages` を開きます。
-3. `Build and deployment` > `Branch` で `main`（または `master`）を選択し、`/ (root)` を指定して `Save` をクリックします。
-4. 数分後、公開されたURLにアクセスできるようになります。
-
-## カスタマイズ
-- `js/weather.js`: 緯度・経度を変更することで、お住まいの地域の天気に変更できます。
-- `css/style.css`: `--border-size` や `--shadow-offset` を変更することで、デザインの強さを調整できます。
+1. このリポジトリに `index.html` とこの `README.md` があることを確認します。
+2. GitHubリポジトリの `Settings` タブを開きます。
+3. 左メニューの `Pages` を開きます。
+4. `Build and deployment` > `Branch` で `main`（または `master`）を選択し、`/ (root)` を指定して `Save` をクリックします。
+5. 数分後、画面上部に公開されたURLが表示されます！
