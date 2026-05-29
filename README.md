@@ -1,5 +1,7 @@
 # Campus Life Organizer
 
+**[🚀 アプリを開く (Live Demo)](https://a226t002-alt.github.io/my-app-2026-2/)**
+
 HTML/CSS/JavaScriptのみで構築された、GitHub Pagesで公開可能な高機能な学生向けライフオーガナイザー（ダッシュボード）アプリです。
 
 ## 主な機能
