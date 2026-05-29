@@ -1,664 +1,543 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, CheckSquare, FileText, Plus, Trash2, X, MapPin, BookOpen, Clock, AlertCircle, Link, ExternalLink, Sparkles, Heart } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Life Organizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="min-h-screen bg-[#fff5f7] text-stone-700 selection:bg-pink-200 pb-10">
 
-// URLを適切な形（http://～）に補完する関数
-const formatUrl = (url) => {
-  if (!url || !url.trim()) return '';
-  let formatted = url.trim();
-  if (!/^https?:\/\//i.test(formatted)) {
-    formatted = 'https://' + formatted;
-  }
-  return formatted;
-};
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('timetable');
-
-  // --- State: 時間割 ---
-  // キー: "day-period" (例: "0-0" は月曜1限)
-  const [timetable, setTimetable] = useState({});
-  const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [selectedCell, setSelectedCell] = useState(null); // {day, period}
-  const [classForm, setClassForm] = useState({ name: '', room: '', teacher: '', url: '' });
-
-  // --- State: 課題・Todo ---
-  const [todos, setTodos] = useState([
-    { id: 1, text: 'レポートの提出（○○学）', deadline: '2026-05-25', priority: 'high', completed: false, url: 'https://example.com' },
-    { id: 2, text: 'サークルの出欠入力', deadline: '', priority: 'medium', completed: true, url: '' },
-  ]);
-  const [newTodo, setNewTodo] = useState('');
-  const [newDeadline, setNewDeadline] = useState('');
-  const [newPriority, setNewPriority] = useState('medium');
-  const [newTodoUrl, setNewTodoUrl] = useState('');
-
-  // --- State: メモ ---
-  const [memos, setMemos] = useState([
-    { id: 1, text: 'Wi-Fiのパスワード: campus-net / pass: 12345678\nポータルの使い方を確認する！', date: '2026-05-15', url: 'https://example.com/portal' },
-  ]);
-  const [newMemo, setNewMemo] = useState('');
-  const [newMemoUrl, setNewMemoUrl] = useState('');
-
-  // --- State: リンク (独立したリンク集用) ---
-  const [links, setLinks] = useState([
-    { id: 1, title: '大学ポータルサイト', url: 'https://example.com/portal' },
-    { id: 2, title: '図書館蔵書検索', url: 'https://example.com/library' },
-  ]);
-  const [newLinkTitle, setNewLinkTitle] = useState('');
-  const [newLinkUrl, setNewLinkUrl] = useState('');
-
-  const days = ['月', '火', '水', '木', '金'];
-  const periods = ['1限', '2限', '3限', '4限', '5限', '6限'];
-  const periodTimes = ['9:00 - 10:30', '10:40 - 12:10', '13:00 - 14:30', '14:40 - 16:10', '16:20 - 17:50', '18:00 - 19:30'];
-
-  // --- 時間割関連の関数 ---
-  const handleCellClick = (dayIndex, periodIndex) => {
-    const key = `${dayIndex}-${periodIndex}`;
-    setSelectedCell({ dayIndex, periodIndex, key });
-    if (timetable[key]) {
-      setClassForm(timetable[key]);
-    } else {
-      setClassForm({ name: '', room: '', teacher: '', url: '' });
-    }
-    setIsClassModalOpen(true);
-  };
-
-  const saveClass = () => {
-    if (classForm.name.trim() === '') {
-      const newTimetable = { ...timetable };
-      delete newTimetable[selectedCell.key];
-      setTimetable(newTimetable);
-    } else {
-      setTimetable({
-        ...timetable,
-        [selectedCell.key]: {
-          ...classForm,
-          url: formatUrl(classForm.url)
-        },
-      });
-    }
-    setIsClassModalOpen(false);
-  };
-
-  const deleteClass = () => {
-    const newTimetable = { ...timetable };
-    delete newTimetable[selectedCell.key];
-    setTimetable(newTimetable);
-    setIsClassModalOpen(false);
-  };
-
-  // --- 課題・Todo関連の関数 ---
-  const addTodo = (e) => {
-    e.preventDefault();
-    if (!newTodo.trim()) return;
-    const todo = {
-      id: Date.now(),
-      text: newTodo,
-      deadline: newDeadline,
-      priority: newPriority,
-      url: formatUrl(newTodoUrl),
-      completed: false,
-    };
-    setTodos([...todos, todo].sort((a, b) => new Date(a.deadline || '9999-12-31') - new Date(b.deadline || '9999-12-31')));
-    setNewTodo('');
-    setNewDeadline('');
-    setNewPriority('medium');
-    setNewTodoUrl('');
-  };
-
-  const toggleTodo = (id) => {
-    setTodos(todos.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const deleteTodo = (id) => {
-    setTodos(todos.filter(t => t.id !== id));
-  };
-
-  // --- メモ関連の関数 ---
-  const addMemo = (e) => {
-    e.preventDefault();
-    if (!newMemo.trim()) return;
-    const memo = {
-      id: Date.now(),
-      text: newMemo,
-      url: formatUrl(newMemoUrl),
-      date: new Date().toISOString().split('T')[0],
-    };
-    setMemos([memo, ...memos]);
-    setNewMemo('');
-    setNewMemoUrl('');
-  };
-
-  const deleteMemo = (id) => {
-    setMemos(memos.filter(m => m.id !== id));
-  };
-
-  // --- リンク関連の関数 ---
-  const addLink = (e) => {
-    e.preventDefault();
-    if (!newLinkTitle.trim() || !newLinkUrl.trim()) return;
-    const link = {
-      id: Date.now(),
-      title: newLinkTitle,
-      url: formatUrl(newLinkUrl),
-    };
-    setLinks([link, ...links]);
-    setNewLinkTitle('');
-    setNewLinkUrl('');
-  };
-
-  const deleteLink = (id) => {
-    setLinks(links.filter(l => l.id !== id));
-  };
-
-  return (
-    <div className="min-h-screen bg-[#fff5f7] text-stone-700 font-sans selection:bg-pink-200 pb-10">
-      {/* ヘッダー */}
-      <header className="bg-gradient-to-r from-pink-400 via-rose-400 to-pink-400 text-white p-5 shadow-md shadow-pink-200/50 rounded-b-[2rem] mb-6">
-        <div className="max-w-5xl mx-auto flex items-center gap-3 px-2">
-          <Sparkles className="w-6 h-6 animate-pulse" />
-          <h1 className="text-xl font-bold tracking-wider drop-shadow-sm">Campus Life Organizer</h1>
+    <!-- ヘッダー -->
+    <header class="bg-gradient-to-r from-pink-400 via-rose-400 to-pink-400 text-white p-5 shadow-md shadow-pink-200/50 rounded-b-[2rem] mb-6">
+        <div class="max-w-5xl mx-auto flex items-center gap-3 px-2">
+            <i data-lucide="sparkles" class="w-6 h-6 animate-pulse"></i>
+            <h1 class="text-xl font-bold tracking-wider drop-shadow-sm">Campus Life Organizer</h1>
         </div>
-      </header>
+    </header>
 
-      <main className="max-w-5xl mx-auto p-4">
-        {/* ナビゲーションタブ */}
-        <div className="flex bg-white/70 backdrop-blur-md rounded-full shadow-sm p-1.5 mb-8 border border-white overflow-x-auto gap-1">
-          <button
-            onClick={() => setActiveTab('timetable')}
-            className={`min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'timetable' ? 'bg-pink-400 text-white shadow-md shadow-pink-200/50 transform scale-[1.02]' : 'text-stone-400 hover:bg-white hover:text-pink-400'}`}
-          >
-            <Calendar className="w-4 h-4" />
-            <span className="hidden sm:inline">時間割</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('todo')}
-            className={`min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'todo' ? 'bg-pink-400 text-white shadow-md shadow-pink-200/50 transform scale-[1.02]' : 'text-stone-400 hover:bg-white hover:text-pink-400'}`}
-          >
-            <CheckSquare className="w-4 h-4" />
-            <span className="hidden sm:inline">課題・Todo</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('memo')}
-            className={`min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'memo' ? 'bg-pink-400 text-white shadow-md shadow-pink-200/50 transform scale-[1.02]' : 'text-stone-400 hover:bg-white hover:text-pink-400'}`}
-          >
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">メモ</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('link')}
-            className={`min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'link' ? 'bg-pink-400 text-white shadow-md shadow-pink-200/50 transform scale-[1.02]' : 'text-stone-400 hover:bg-white hover:text-pink-400'}`}
-          >
-            <Link className="w-4 h-4" />
-            <span className="hidden sm:inline">リンク集</span>
-          </button>
+    <main class="max-w-5xl mx-auto p-4">
+        <!-- ナビゲーションタブ -->
+        <div class="flex bg-white/70 backdrop-blur-md rounded-full shadow-sm p-1.5 mb-8 border border-white overflow-x-auto gap-1">
+            <button onclick="switchTab('timetable')" id="tab-btn-timetable" class="tab-btn min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap bg-pink-400 text-white shadow-md shadow-pink-200/50 transform scale-[1.02]">
+                <i data-lucide="calendar" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">時間割</span>
+            </button>
+            <button onclick="switchTab('todo')" id="tab-btn-todo" class="tab-btn min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap text-stone-400 hover:bg-white hover:text-pink-400">
+                <i data-lucide="check-square" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">課題・Todo</span>
+            </button>
+            <button onclick="switchTab('memo')" id="tab-btn-memo" class="tab-btn min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap text-stone-400 hover:bg-white hover:text-pink-400">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">メモ</span>
+            </button>
+            <button onclick="switchTab('link')" id="tab-btn-link" class="tab-btn min-w-[80px] flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-full text-sm font-bold transition-all whitespace-nowrap text-stone-400 hover:bg-white hover:text-pink-400">
+                <i data-lucide="link" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">リンク集</span>
+            </button>
         </div>
 
-        {/* --- 時間割タブ --- */}
-        {activeTab === 'timetable' && (
-          <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
-            <div className="p-5 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
-              <h2 className="text-lg font-bold flex items-center gap-2 text-pink-500">
-                <Calendar className="w-5 h-5" />
-                今学期の時間割
-              </h2>
-              <p className="text-xs text-stone-400 mt-1">マスをタップして授業を登録してね♪ URLも貼れます！</p>
-            </div>
-            <div className="overflow-x-auto p-4">
-              <table className="w-full text-sm text-left border-collapse">
-                <thead className="text-stone-500">
-                  <tr>
-                    <th className="px-2 py-3 w-16 text-center border-b-2 border-pink-100"></th>
-                    {days.map(day => (
-                      <th key={day} className="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">{day}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {periods.map((period, periodIndex) => (
-                    <tr key={period}>
-                      <th className="px-2 py-4 border-b border-pink-50 text-center font-bold text-stone-400">
-                        <div className="bg-pink-50 rounded-xl py-1">{period}</div>
-                        <div className="text-[9px] text-stone-300 font-normal mt-1">{periodTimes[periodIndex]}</div>
-                      </th>
-                      {days.map((day, dayIndex) => {
-                        const key = `${dayIndex}-${periodIndex}`;
-                        const cls = timetable[key];
-                        return (
-                          <td 
-                            key={key} 
-                            onClick={() => handleCellClick(dayIndex, periodIndex)}
-                            className="border-b border-pink-50 p-1.5 cursor-pointer align-top relative group"
-                          >
-                            {cls ? (
-                              <div className="h-24 bg-gradient-to-br from-pink-50 to-rose-100 border border-pink-200 rounded-2xl p-2.5 text-rose-800 flex flex-col gap-1 overflow-hidden shadow-sm hover:shadow-md transition-shadow relative">
-                                <div className="font-bold text-sm leading-tight truncate pr-6">{cls.name}</div>
-                                {cls.room && <div className="text-xs text-rose-600 flex items-center gap-1 mt-auto truncate bg-white/50 rounded-lg px-1.5 py-0.5 w-fit"><MapPin className="w-3 h-3 flex-shrink-0"/>{cls.room}</div>}
-                                {cls.teacher && <div className="text-[10px] text-rose-500 truncate">{cls.teacher}</div>}
-                                
-                                {/* 時間割のリンクアイコン */}
-                                {cls.url && (
-                                  <a 
-                                    href={cls.url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full text-pink-400 hover:text-pink-600 shadow-sm hover:scale-110 transition-transform"
-                                    onClick={(e) => e.stopPropagation()} // セルのクリック(モーダルを開く)を防ぐ
-                                    title="リンクを開く"
-                                  >
-                                    <ExternalLink className="w-3.5 h-3.5" />
-                                  </a>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="h-24 border-2 border-dashed border-pink-100 group-hover:border-pink-300 group-hover:bg-pink-50/50 rounded-2xl flex items-center justify-center transition-colors">
-                                <Plus className="w-6 h-6 text-pink-300 opacity-0 group-hover:opacity-100 transform group-hover:scale-110 transition-all" />
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* --- 課題・Todoタブ --- */}
-        {activeTab === 'todo' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border-2 border-pink-50 p-6">
-                <h2 className="text-lg font-bold flex items-center gap-2 text-pink-500 mb-5">
-                  <Sparkles className="w-5 h-5" />
-                  タスクを追加
+        <!-- --- 時間割タブ --- -->
+        <div id="content-timetable" class="tab-content active bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
+            <div class="p-5 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
+                <h2 class="text-lg font-bold flex items-center gap-2 text-pink-500">
+                    <i data-lucide="calendar" class="w-5 h-5"></i>
+                    今学期の時間割
                 </h2>
-                <form onSubmit={addTodo} className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">課題・タスク名</label>
-                    <input
-                      type="text"
-                      value={newTodo}
-                      onChange={(e) => setNewTodo(e.target.value)}
-                      placeholder="例: 経済学レポート"
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">期限（任意）</label>
-                    <input
-                      type="date"
-                      value={newDeadline}
-                      onChange={(e) => setNewDeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">関連リンク (URL)（任意）</label>
-                    <input
-                      type="url"
-                      value={newTodoUrl}
-                      onChange={(e) => setNewTodoUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">重要度</label>
-                    <select
-                      value={newPriority}
-                      onChange={(e) => setNewPriority(e.target.value)}
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600"
-                    >
-                      <option value="high">高 (優先)</option>
-                      <option value="medium">中</option>
-                      <option value="low">低</option>
-                    </select>
-                  </div>
-                  <button type="submit" className="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all mt-2 shadow-md shadow-pink-200/50">
-                    追加する
-                  </button>
-                </form>
-              </div>
+                <p class="text-xs text-stone-400 mt-1">マスをタップして授業を登録してね♪ URLも貼れます！</p>
             </div>
-            
-            <div className="md:col-span-2">
-              <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
-                <div className="p-6 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-pink-500">
-                    <Heart className="w-5 h-5 fill-pink-100" />
-                    進行中の課題・タスク ({todos.filter(t => !t.completed).length})
-                  </h2>
-                </div>
-                <div className="p-4 flex flex-col gap-3">
-                  {todos.length === 0 ? (
-                    <div className="p-10 text-center text-stone-400 text-sm">タスクはありません。よく頑張っています！☕️</div>
-                  ) : (
-                    todos.map(todo => {
-                      let isUrgent = false;
-                      let isOverdue = false;
-                      if (todo.deadline && !todo.completed) {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        const deadlineDate = new Date(todo.deadline);
-                        const diffTime = deadlineDate - today;
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays < 0) {
-                          isOverdue = true;
-                        } else if (diffDays <= 3) {
-                          isUrgent = true;
-                        }
-                      }
+            <div class="overflow-x-auto p-4">
+                <table class="w-full text-sm text-left border-collapse">
+                    <thead class="text-stone-500">
+                        <tr>
+                            <th class="px-2 py-3 w-16 text-center border-b-2 border-pink-100"></th>
+                            <th class="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">月</th>
+                            <th class="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">火</th>
+                            <th class="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">水</th>
+                            <th class="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">木</th>
+                            <th class="px-4 py-3 text-center border-b-2 border-pink-100 font-bold min-w-[120px] text-pink-400">金</th>
+                        </tr>
+                    </thead>
+                    <tbody id="timetable-body">
+                        <!-- JSで生成 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                      const priorityStyles = {
-                        high: 'bg-rose-100 text-rose-600 border-rose-200',
-                        medium: 'bg-orange-100 text-orange-500 border-orange-200',
-                        low: 'bg-emerald-100 text-emerald-600 border-emerald-200'
-                      };
-                      const priorityLabels = { high: '優先', medium: '中', low: '低' };
-
-                      return (
-                        <div key={todo.id} className={`p-4 rounded-2xl border-2 flex items-start sm:items-center gap-4 transition-all ${
-                          todo.completed ? 'opacity-50 bg-stone-50 border-stone-100' : 
-                          (isOverdue ? 'bg-red-50/80 border-red-200 shadow-sm' : 
-                          (isUrgent ? 'bg-orange-50/80 border-orange-200 shadow-sm' : 'bg-white border-pink-100 hover:border-pink-200 hover:shadow-sm'))
-                        }`}>
-                          <button 
-                            onClick={() => toggleTodo(todo.id)}
-                            className={`mt-1 sm:mt-0 flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${todo.completed ? 'bg-pink-400 border-pink-400 text-white' : 'border-pink-200 text-transparent hover:border-pink-400 hover:bg-pink-50'}`}
-                          >
-                            <CheckSquare className="w-4 h-4" />
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${priorityStyles[todo.priority] || priorityStyles.medium}`}>
-                                {priorityLabels[todo.priority] || '中'}
-                              </span>
-                            </div>
-                            <p className={`text-sm font-bold break-words ${
-                              todo.completed ? 'line-through text-stone-400' : 
-                              (isOverdue ? 'text-red-600' : 
-                              (isUrgent ? 'text-orange-600' : 'text-stone-700'))
-                            }`}>
-                              {todo.text}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
-                              {todo.deadline && (
-                                <p className={`text-xs flex items-center gap-1 ${
-                                  isOverdue ? 'text-red-500 font-bold' : 
-                                  (isUrgent && !todo.completed ? 'text-orange-500 font-bold' : 'text-stone-400')
-                                }`}>
-                                  {isOverdue || isUrgent ? <AlertCircle className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                  {todo.deadline} まで
-                                  {isOverdue && !todo.completed && ' (期限切れ!)'}
-                                  {isUrgent && !todo.completed && ' (間近!)'}
-                                </p>
-                              )}
-                              
-                              {/* Todoのリンクボタン */}
-                              {todo.url && (
-                                <a 
-                                  href={todo.url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="text-xs flex items-center gap-1 text-pink-500 hover:text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-0.5 rounded-lg transition-colors"
-                                >
-                                  <ExternalLink className="w-3 h-3" />
-                                  リンクを開く
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => deleteTodo(todo.id)}
-                            className="flex-shrink-0 text-pink-200 hover:text-red-400 hover:bg-red-50 rounded-full p-2 transition-colors mt-1 sm:mt-0"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+        <!-- --- 課題・Todoタブ --- -->
+        <div id="content-todo" class="tab-content grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-1">
+                <div class="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border-2 border-pink-50 p-6">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-pink-500 mb-5">
+                        <i data-lucide="sparkles" class="w-5 h-5"></i>
+                        タスクを追加
+                    </h2>
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">課題・タスク名</label>
+                            <input type="text" id="todo-input" placeholder="例: 経済学レポート" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
                         </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- メモタブ --- */}
-        {activeTab === 'memo' && (
-          <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden flex flex-col md:flex-row h-[600px]">
-            {/* メモ作成エリア */}
-            <div className="md:w-1/3 border-b md:border-b-0 md:border-r border-pink-50 p-6 bg-pink-50/30 flex flex-col">
-              <h2 className="text-sm font-bold text-pink-500 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                新しくメモする
-              </h2>
-              <form onSubmit={addMemo} className="flex-1 flex flex-col gap-4">
-                <textarea
-                  value={newMemo}
-                  onChange={(e) => setNewMemo(e.target.value)}
-                  placeholder="ここにメモを入力... (例: 次回のゼミの持ち物)"
-                  className="flex-1 w-full p-4 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm resize-none bg-white transition-all text-stone-600 leading-relaxed"
-                  required
-                />
-                <input
-                  type="url"
-                  value={newMemoUrl}
-                  onChange={(e) => setNewMemoUrl(e.target.value)}
-                  placeholder="関連リンク (URL)（任意）"
-                  className="w-full px-4 py-3 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-white transition-all text-stone-600"
-                />
-                <button type="submit" className="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all shadow-md shadow-pink-200/50">
-                  保存する
-                </button>
-              </form>
-            </div>
-            
-            {/* メモ一覧エリア */}
-            <div className="md:w-2/3 p-6 overflow-y-auto bg-white/50">
-              <h2 className="text-sm font-bold text-stone-500 mb-5 px-2">保存されたメモ</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {memos.length === 0 ? (
-                  <div className="col-span-full p-10 text-center text-stone-400 text-sm">メモはありません。</div>
-                ) : (
-                  memos.map(memo => (
-                    <div key={memo.id} className="group relative p-5 rounded-3xl shadow-sm border border-yellow-100 bg-gradient-to-br from-[#fffdf0] to-[#fff9d6] hover:rotate-1 hover:scale-[1.02] transition-all flex flex-col">
-                      <p className="text-sm text-stone-700 whitespace-pre-wrap pr-4 leading-relaxed font-medium flex-1">{memo.text}</p>
-                      
-                      {/* メモのリンクボタン */}
-                      {memo.url && (
-                        <div className="mt-3 mb-1">
-                          <a 
-                            href={memo.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-pink-500 hover:text-pink-600 bg-pink-100/50 hover:bg-pink-100 px-3 py-1.5 rounded-xl transition-colors"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            リンクを開く
-                          </a>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">期限（任意）</label>
+                            <input type="date" id="todo-deadline" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600">
                         </div>
-                      )}
-                      
-                      <div className="text-[10px] text-stone-400 mt-2 font-bold">{memo.date}</div>
-                      <button 
-                        onClick={() => deleteMemo(memo.id)}
-                        className="absolute top-3 right-3 text-yellow-600/30 hover:text-red-400 hover:bg-white/50 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* --- リンク集タブ --- */}
-        {activeTab === 'link' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="md:col-span-1">
-              <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border-2 border-pink-50 p-6">
-                <h2 className="text-lg font-bold flex items-center gap-2 text-pink-500 mb-5">
-                  <Link className="w-5 h-5" />
-                  リンクを追加
-                </h2>
-                <form onSubmit={addLink} className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">サイト名</label>
-                    <input
-                      type="text"
-                      value={newLinkTitle}
-                      onChange={(e) => setNewLinkTitle(e.target.value)}
-                      placeholder="例: 大学ポータル"
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">URL</label>
-                    <input
-                      type="url"
-                      value={newLinkUrl}
-                      onChange={(e) => setNewLinkUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600"
-                      required
-                    />
-                  </div>
-                  <button type="submit" className="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all mt-2 shadow-md shadow-pink-200/50">
-                    追加する
-                  </button>
-                </form>
-              </div>
-            </div>
-            
-            <div className="md:col-span-2">
-              <div className="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
-                <div className="p-6 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
-                  <h2 className="text-lg font-bold flex items-center gap-2 text-pink-500">
-                    <Heart className="w-5 h-5 fill-pink-100" />
-                    よく使うリンク集
-                  </h2>
-                </div>
-                <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {links.length === 0 ? (
-                    <div className="col-span-full p-10 text-center text-stone-400 text-sm">リンクは登録されていません。</div>
-                  ) : (
-                    links.map(link => (
-                      <div key={link.id} className="group relative flex items-center bg-white border-2 border-pink-50 rounded-3xl hover:border-pink-200 hover:shadow-lg hover:shadow-pink-100/50 hover:-translate-y-1 transition-all overflow-hidden p-2">
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex-1 p-2 flex items-center gap-3 overflow-hidden"
-                        >
-                          <div className="bg-gradient-to-br from-pink-100 to-rose-100 p-3 rounded-2xl text-pink-500 shadow-inner flex-shrink-0">
-                            <ExternalLink className="w-5 h-5" />
-                          </div>
-                          <div className="min-w-0 pr-6">
-                            <h3 className="font-bold text-stone-700 text-sm truncate">{link.title}</h3>
-                            <p className="text-[10px] text-stone-400 truncate mt-1">{link.url}</p>
-                          </div>
-                        </a>
-                        <button 
-                          onClick={() => deleteLink(link.id)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur rounded-full text-pink-200 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shadow-sm border border-pink-50"
-                          title="削除"
-                        >
-                          <Trash2 className="w-4 h-4" />
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">関連リンク (URL)（任意）</label>
+                            <input type="url" id="todo-url" placeholder="https://..." class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">重要度</label>
+                            <select id="todo-priority" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600">
+                                <option value="high">高 (優先)</option>
+                                <option value="medium" selected>中</option>
+                                <option value="low">低</option>
+                            </select>
+                        </div>
+                        <button onclick="addTodo()" class="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all mt-2 shadow-md shadow-pink-200/50">
+                            追加する
                         </button>
-                      </div>
-                    ))
-                  )}
+                    </div>
                 </div>
-              </div>
             </div>
-          </div>
-        )}
-      </main>
-
-      {/* --- 授業編集モーダル --- */}
-      {isClassModalOpen && selectedCell && (
-        <div className="fixed inset-0 bg-stone-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200 border-4 border-pink-50">
-            <div className="px-6 py-5 border-b border-pink-50 flex justify-between items-center bg-gradient-to-r from-pink-50 to-white">
-              <h3 className="font-bold text-pink-600 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                {days[selectedCell.dayIndex]}曜 {periods[selectedCell.periodIndex]} の授業
-              </h3>
-              <button onClick={() => setIsClassModalOpen(false)} className="text-pink-300 hover:text-pink-500 bg-white rounded-full p-1 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+            
+            <div class="md:col-span-2">
+                <div class="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
+                    <div class="p-6 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
+                        <h2 class="text-lg font-bold flex items-center gap-2 text-pink-500">
+                            <i data-lucide="heart" class="w-5 h-5 fill-pink-100"></i>
+                            進行中の課題・タスク (<span id="todo-count">0</span>)
+                        </h2>
+                    </div>
+                    <div id="todo-list" class="p-4 flex flex-col gap-3">
+                        <!-- JSで生成 -->
+                    </div>
+                </div>
             </div>
-            <div className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">授業名</label>
-                <input
-                  type="text"
-                  value={classForm.name}
-                  onChange={(e) => setClassForm({...classForm, name: e.target.value})}
-                  placeholder="例: 経済学入門"
-                  className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">教室（任意）</label>
-                <input
-                  type="text"
-                  value={classForm.room}
-                  onChange={(e) => setClassForm({...classForm, room: e.target.value})}
-                  placeholder="例: 101教室"
-                  className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">担当教員（任意）</label>
-                <input
-                  type="text"
-                  value={classForm.teacher}
-                  onChange={(e) => setClassForm({...classForm, teacher: e.target.value})}
-                  placeholder="例: 山田 太郎"
-                  className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-stone-500 mb-1.5 ml-1">関連リンク (URL)（任意）</label>
-                <input
-                  type="url"
-                  value={classForm.url || ''}
-                  onChange={(e) => setClassForm({...classForm, url: e.target.value})}
-                  placeholder="ZoomやLMSのURL"
-                  className="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all"
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-pink-50/50 flex justify-between items-center">
-              {timetable[selectedCell.key] ? (
-                <button onClick={deleteClass} className="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full text-sm font-bold flex items-center gap-1 px-3 py-1.5 transition-colors">
-                  <Trash2 className="w-4 h-4" /> 削除
-                </button>
-              ) : (
-                <div></div>
-              )}
-              <div className="flex gap-2">
-                <button onClick={() => setIsClassModalOpen(false)} className="px-5 py-2.5 rounded-full text-sm font-bold text-stone-500 hover:bg-white hover:text-stone-700 transition-colors">
-                  キャンセル
-                </button>
-                <button onClick={saveClass} className="px-6 py-2.5 bg-pink-400 hover:bg-pink-500 active:scale-95 text-white rounded-full text-sm font-bold transition-all shadow-md shadow-pink-200/50">
-                  保存する
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+
+        <!-- --- メモタブ --- -->
+        <div id="content-memo" class="tab-content bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden flex flex-col md:flex-row h-[600px]">
+            <div class="md:w-1/3 border-b md:border-b-0 md:border-r border-pink-50 p-6 bg-pink-50/30 flex flex-col">
+                <h2 class="text-sm font-bold text-pink-500 mb-4 flex items-center gap-2">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    新しくメモする
+                </h2>
+                <div class="flex-1 flex flex-col gap-4">
+                    <textarea id="memo-input" placeholder="ここにメモを入力..." class="flex-1 w-full p-4 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm resize-none bg-white transition-all text-stone-600 leading-relaxed"></textarea>
+                    <input type="url" id="memo-url" placeholder="関連リンク (URL)（任意）" class="w-full px-4 py-3 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-white transition-all text-stone-600">
+                    <button onclick="addMemo()" class="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all shadow-md shadow-pink-200/50">
+                        保存する
+                    </button>
+                </div>
+            </div>
+            <div class="md:w-2/3 p-6 overflow-y-auto bg-white/50">
+                <h2 class="text-sm font-bold text-stone-500 mb-5 px-2">保存されたメモ</h2>
+                <div id="memo-list" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- JSで生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- --- リンク集タブ --- -->
+        <div id="content-link" class="tab-content grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-1">
+                <div class="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border-2 border-pink-50 p-6">
+                    <h2 class="text-lg font-bold flex items-center gap-2 text-pink-500 mb-5">
+                        <i data-lucide="link" class="w-5 h-5"></i>
+                        リンクを追加
+                    </h2>
+                    <div class="flex flex-col gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">サイト名</label>
+                            <input type="text" id="link-title" placeholder="例: 大学ポータル" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">URL</label>
+                            <input type="url" id="link-url" placeholder="https://..." class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all text-stone-600">
+                        </div>
+                        <button onclick="addLink()" class="w-full bg-pink-400 hover:bg-pink-500 active:scale-95 text-white py-3 rounded-2xl text-sm font-bold transition-all mt-2 shadow-md shadow-pink-200/50">
+                            追加する
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="md:col-span-2">
+                <div class="bg-white rounded-[2rem] shadow-sm shadow-pink-100 border border-pink-50 overflow-hidden">
+                    <div class="p-6 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-white">
+                        <h2 class="text-lg font-bold flex items-center gap-2 text-pink-500">
+                            <i data-lucide="heart" class="w-5 h-5 fill-pink-100"></i>
+                            よく使うリンク集
+                        </h2>
+                    </div>
+                    <div id="link-list" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- JSで生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- --- 授業編集モーダル --- -->
+    <div id="class-modal" class="fixed inset-0 bg-stone-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden border-4 border-pink-50">
+            <div class="px-6 py-5 border-b border-pink-50 flex justify-between items-center bg-gradient-to-r from-pink-50 to-white">
+                <h3 id="modal-title" class="font-bold text-pink-600 flex items-center gap-2">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    授業の登録
+                </h3>
+                <button onclick="closeModal()" class="text-pink-300 hover:text-pink-500 bg-white rounded-full p-1 transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="p-6 flex flex-col gap-4">
+                <input type="hidden" id="modal-key">
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">授業名</label>
+                    <input type="text" id="modal-name" placeholder="例: 経済学入門" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">教室（任意）</label>
+                    <input type="text" id="modal-room" placeholder="例: 101教室" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">担当教員（任意）</label>
+                    <input type="text" id="modal-teacher" placeholder="例: 山田 太郎" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-stone-500 mb-1.5 ml-1">関連リンク (URL)（任意）</label>
+                    <input type="url" id="modal-url" placeholder="ZoomやLMSのURL" class="w-full px-4 py-2.5 border-2 border-pink-100 rounded-2xl focus:outline-none focus:border-pink-300 focus:ring-4 focus:ring-pink-50 text-sm bg-pink-50/30 transition-all">
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-pink-50/50 flex justify-between items-center">
+                <button id="modal-delete-btn" onclick="deleteClass()" class="text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full text-sm font-bold flex items-center gap-1 px-3 py-1.5 transition-colors hidden">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> 削除
+                </button>
+                <div></div>
+                <div class="flex gap-2">
+                    <button onclick="closeModal()" class="px-5 py-2.5 rounded-full text-sm font-bold text-stone-500 hover:bg-white hover:text-stone-700 transition-colors">
+                        キャンセル
+                    </button>
+                    <button onclick="saveClass()" class="px-6 py-2.5 bg-pink-400 hover:bg-pink-500 active:scale-95 text-white rounded-full text-sm font-bold transition-all shadow-md shadow-pink-200/50">
+                        保存する
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-  );
-}
+
+    <script>
+        // --- データ管理 (LocalStorage) ---
+        let state = {
+            timetable: JSON.parse(localStorage.getItem('cl_timetable')) || {},
+            todos: JSON.parse(localStorage.getItem('cl_todos')) || [],
+            memos: JSON.parse(localStorage.getItem('cl_memos')) || [],
+            links: JSON.parse(localStorage.getItem('cl_links')) || []
+        };
+
+        function saveState() {
+            localStorage.setItem('cl_timetable', JSON.stringify(state.timetable));
+            localStorage.setItem('cl_todos', JSON.stringify(state.todos));
+            localStorage.setItem('cl_memos', JSON.stringify(state.memos));
+            localStorage.setItem('cl_links', JSON.stringify(state.links));
+            renderAll();
+        }
+
+        // --- 便利関数 ---
+        const formatUrl = (url) => {
+            if (!url || !url.trim()) return '';
+            let formatted = url.trim();
+            if (!/^https?:\/\//i.test(formatted)) {
+                formatted = 'https://' + formatted;
+            }
+            return formatted;
+        };
+
+        // --- タブ切り替え ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('bg-pink-400', 'text-white', 'shadow-md', 'shadow-pink-200/50', 'scale-[1.02]');
+                btn.classList.add('text-stone-400', 'hover:bg-white', 'hover:text-pink-400');
+            });
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            activeBtn.classList.add('bg-pink-400', 'text-white', 'shadow-md', 'shadow-pink-200/50', 'scale-[1.02]');
+            activeBtn.classList.remove('text-stone-400', 'hover:bg-white', 'hover:text-pink-400');
+
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`content-${tabId}`).classList.add('active');
+        }
+
+        // --- 時間割 ---
+        const days = ['月', '火', '水', '木', '金'];
+        const periods = ['1限', '2限', '3限', '4限', '5限', '6限'];
+        const periodTimes = ['9:00 - 10:30', '10:40 - 12:10', '13:00 - 14:30', '14:40 - 16:10', '16:20 - 17:50', '18:00 - 19:30'];
+
+        function renderTimetable() {
+            const tbody = document.getElementById('timetable-body');
+            tbody.innerHTML = '';
+            periods.forEach((period, pIdx) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <th class="px-2 py-4 border-b border-pink-50 text-center font-bold text-stone-400">
+                        <div class="bg-pink-50 rounded-xl py-1">${period}</div>
+                        <div class="text-[9px] text-stone-300 font-normal mt-1">${periodTimes[pIdx]}</div>
+                    </th>
+                `;
+                days.forEach((day, dIdx) => {
+                    const key = `${dIdx}-${pIdx}`;
+                    const cls = state.timetable[key];
+                    const td = document.createElement('td');
+                    td.className = "border-b border-pink-50 p-1.5 cursor-pointer align-top relative group";
+                    td.onclick = () => openModal(dIdx, pIdx);
+                    
+                    if (cls) {
+                        td.innerHTML = `
+                            <div class="h-24 bg-gradient-to-br from-pink-50 to-rose-100 border border-pink-200 rounded-2xl p-2.5 text-rose-800 flex flex-col gap-1 overflow-hidden shadow-sm hover:shadow-md transition-shadow relative">
+                                <div class="font-bold text-sm leading-tight truncate pr-6">${cls.name}</div>
+                                ${cls.room ? `<div class="text-xs text-rose-600 flex items-center gap-1 mt-auto truncate bg-white/50 rounded-lg px-1.5 py-0.5 w-fit"><i data-lucide="map-pin" class="w-3 h-3 flex-shrink-0"></i>${cls.room}</div>` : ''}
+                                ${cls.teacher ? `<div class="text-[10px] text-rose-500 truncate">${cls.teacher}</div>` : ''}
+                                ${cls.url ? `<a href="${cls.url}" target="_blank" rel="noopener noreferrer" class="absolute top-2 right-2 p-1.5 bg-white/80 backdrop-blur rounded-full text-pink-400 hover:text-pink-600 shadow-sm hover:scale-110 transition-transform" onclick="event.stopPropagation()"><i data-lucide="external-link" class="w-3.5 h-3.5"></i></a>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        td.innerHTML = `
+                            <div class="h-24 border-2 border-dashed border-pink-100 group-hover:border-pink-300 group-hover:bg-pink-50/50 rounded-2xl flex items-center justify-center transition-colors">
+                                <i data-lucide="plus" class="w-6 h-6 text-pink-300 opacity-0 group-hover:opacity-100 transform group-hover:scale-110 transition-all"></i>
+                            </div>
+                        `;
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        function openModal(dIdx, pIdx) {
+            const key = `${dIdx}-${pIdx}`;
+            const cls = state.timetable[key] || { name: '', room: '', teacher: '', url: '' };
+            document.getElementById('modal-title').innerText = `${days[dIdx]}曜 ${periods[pIdx]} の授業`;
+            document.getElementById('modal-key').value = key;
+            document.getElementById('modal-name').value = cls.name;
+            document.getElementById('modal-room').value = cls.room;
+            document.getElementById('modal-teacher').value = cls.teacher;
+            document.getElementById('modal-url').value = cls.url;
+            
+            document.getElementById('modal-delete-btn').classList.toggle('hidden', !state.timetable[key]);
+            document.getElementById('class-modal').classList.replace('hidden', 'flex');
+        }
+
+        function closeModal() {
+            document.getElementById('class-modal').classList.replace('flex', 'hidden');
+        }
+
+        function saveClass() {
+            const key = document.getElementById('modal-key').value;
+            const name = document.getElementById('modal-name').value;
+            if (!name.trim()) {
+                delete state.timetable[key];
+            } else {
+                state.timetable[key] = {
+                    name,
+                    room: document.getElementById('modal-room').value,
+                    teacher: document.getElementById('modal-teacher').value,
+                    url: formatUrl(document.getElementById('modal-url').value)
+                };
+            }
+            saveState();
+            closeModal();
+        }
+
+        function deleteClass() {
+            const key = document.getElementById('modal-key').value;
+            delete state.timetable[key];
+            saveState();
+            closeModal();
+        }
+
+        // --- Todo ---
+        function addTodo() {
+            const text = document.getElementById('todo-input').value;
+            if (!text.trim()) return;
+            const todo = {
+                id: Date.now(),
+                text,
+                deadline: document.getElementById('todo-deadline').value,
+                priority: document.getElementById('todo-priority').value,
+                url: formatUrl(document.getElementById('todo-url').value),
+                completed: false
+            };
+            state.todos.push(todo);
+            state.todos.sort((a, b) => new Date(a.deadline || '9999-12-31') - new Date(b.deadline || '9999-12-31'));
+            document.getElementById('todo-input').value = '';
+            document.getElementById('todo-deadline').value = '';
+            document.getElementById('todo-url').value = '';
+            saveState();
+        }
+
+        function toggleTodo(id) {
+            state.todos = state.todos.map(t => t.id === id ? {...t, completed: !t.completed} : t);
+            saveState();
+        }
+
+        function deleteTodo(id) {
+            state.todos = state.todos.filter(t => t.id !== id);
+            saveState();
+        }
+
+        function renderTodos() {
+            const list = document.getElementById('todo-list');
+            const count = document.getElementById('todo-count');
+            list.innerHTML = '';
+            const activeTodos = state.todos.filter(t => !t.completed);
+            count.innerText = activeTodos.length;
+
+            if (state.todos.length === 0) {
+                list.innerHTML = '<div class="p-10 text-center text-stone-400 text-sm">タスクはありません。よく頑張っています！☕️</div>';
+                return;
+            }
+
+            state.todos.forEach(todo => {
+                let isUrgent = false, isOverdue = false;
+                if (todo.deadline && !todo.completed) {
+                    const today = new Date(); today.setHours(0,0,0,0);
+                    const deadline = new Date(todo.deadline);
+                    const diffDays = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) isOverdue = true;
+                    else if (diffDays <= 3) isUrgent = true;
+                }
+
+                const priorityStyles = { high: 'bg-rose-100 text-rose-600 border-rose-200', medium: 'bg-orange-100 text-orange-500 border-orange-200', low: 'bg-emerald-100 text-emerald-600 border-emerald-200' };
+                const priorityLabels = { high: '優先', medium: '中', low: '低' };
+
+                const item = document.createElement('div');
+                item.className = `p-4 rounded-2xl border-2 flex items-start sm:items-center gap-4 transition-all ${todo.completed ? 'opacity-50 bg-stone-50 border-stone-100' : (isOverdue ? 'bg-red-50/80 border-red-200 shadow-sm' : (isUrgent ? 'bg-orange-50/80 border-orange-200 shadow-sm' : 'bg-white border-pink-100 hover:border-pink-200 hover:shadow-sm'))}`;
+                item.innerHTML = `
+                    <button onclick="toggleTodo(${todo.id})" class="mt-1 sm:mt-0 flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${todo.completed ? 'bg-pink-400 border-pink-400 text-white' : 'border-pink-200 text-transparent hover:border-pink-400 hover:bg-pink-50'}">
+                        <i data-lucide="check-square" class="w-4 h-4"></i>
+                    </button>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${priorityStyles[todo.priority]}">${priorityLabels[todo.priority]}</span>
+                        </div>
+                        <p class="text-sm font-bold break-words ${todo.completed ? 'line-through text-stone-400' : (isOverdue ? 'text-red-600' : (isUrgent ? 'text-orange-600' : 'text-stone-700'))}">${todo.text}</p>
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
+                            ${todo.deadline ? `<p class="text-xs flex items-center gap-1 ${isOverdue || isUrgent ? 'text-red-500 font-bold' : 'text-stone-400'}"><i data-lucide="${isOverdue || isUrgent ? 'alert-circle' : 'clock'}" class="w-3 h-3"></i>${todo.deadline} まで${isOverdue ? ' (期限切れ!)' : isUrgent ? ' (間近!)' : ''}</p>` : ''}
+                            ${todo.url ? `<a href="${todo.url}" target="_blank" rel="noopener noreferrer" class="text-xs flex items-center gap-1 text-pink-500 hover:text-pink-600 bg-pink-50 hover:bg-pink-100 px-2 py-0.5 rounded-lg transition-colors"><i data-lucide="external-link" class="w-3 h-3"></i>リンクを開く</a>` : ''}
+                        </div>
+                    </div>
+                    <button onclick="deleteTodo(${todo.id})" class="flex-shrink-0 text-pink-200 hover:text-red-400 hover:bg-red-50 rounded-full p-2 transition-colors mt-1 sm:mt-0"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        // --- メモ ---
+        function addMemo() {
+            const text = document.getElementById('memo-input').value;
+            if (!text.trim()) return;
+            state.memos.unshift({
+                id: Date.now(),
+                text,
+                url: formatUrl(document.getElementById('memo-url').value),
+                date: new Date().toISOString().split('T')[0]
+            });
+            document.getElementById('memo-input').value = '';
+            document.getElementById('memo-url').value = '';
+            saveState();
+        }
+
+        function deleteMemo(id) {
+            state.memos = state.memos.filter(m => m.id !== id);
+            saveState();
+        }
+
+        function renderMemos() {
+            const list = document.getElementById('memo-list');
+            list.innerHTML = '';
+            if (state.memos.length === 0) {
+                list.innerHTML = '<div class="col-span-full p-10 text-center text-stone-400 text-sm">メモはありません。</div>';
+                return;
+            }
+            state.memos.forEach(memo => {
+                const item = document.createElement('div');
+                item.className = "group relative p-5 rounded-3xl shadow-sm border border-yellow-100 bg-gradient-to-br from-[#fffdf0] to-[#fff9d6] hover:rotate-1 hover:scale-[1.02] transition-all flex flex-col";
+                item.innerHTML = `
+                    <p class="text-sm text-stone-700 whitespace-pre-wrap pr-4 leading-relaxed font-medium flex-1">${memo.text}</p>
+                    ${memo.url ? `<div class="mt-3 mb-1"><a href="${memo.url}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-bold text-pink-500 hover:text-pink-600 bg-pink-100/50 hover:bg-pink-100 px-3 py-1.5 rounded-xl transition-colors"><i data-lucide="external-link" class="w-3.5 h-3.5"></i>リンクを開く</a></div>` : ''}
+                    <div class="text-[10px] text-stone-400 mt-2 font-bold">${memo.date}</div>
+                    <button onclick="deleteMemo(${memo.id})" class="absolute top-3 right-3 text-yellow-600/30 hover:text-red-400 hover:bg-white/50 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        // --- リンク ---
+        function addLink() {
+            const title = document.getElementById('link-title').value;
+            const url = document.getElementById('link-url').value;
+            if (!title.trim() || !url.trim()) return;
+            state.links.push({ id: Date.now(), title, url: formatUrl(url) });
+            document.getElementById('link-title').value = '';
+            document.getElementById('link-url').value = '';
+            saveState();
+        }
+
+        function deleteLink(id) {
+            state.links = state.links.filter(l => l.id !== id);
+            saveState();
+        }
+
+        function renderLinks() {
+            const list = document.getElementById('link-list');
+            list.innerHTML = '';
+            if (state.links.length === 0) {
+                list.innerHTML = '<div class="col-span-full p-10 text-center text-stone-400 text-sm">リンクは登録されていません。</div>';
+                return;
+            }
+            state.links.forEach(link => {
+                const item = document.createElement('div');
+                item.className = "group relative flex items-center bg-white border-2 border-pink-50 rounded-3xl hover:border-pink-200 hover:shadow-lg hover:shadow-pink-100/50 hover:-translate-y-1 transition-all overflow-hidden p-2";
+                item.innerHTML = `
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="flex-1 p-2 flex items-center gap-3 overflow-hidden">
+                        <div class="bg-gradient-to-br from-pink-100 to-rose-100 p-3 rounded-2xl text-pink-500 shadow-inner flex-shrink-0"><i data-lucide="external-link" class="w-5 h-5"></i></div>
+                        <div class="min-w-0 pr-6">
+                            <h3 class="font-bold text-stone-700 text-sm truncate">${link.title}</h3>
+                            <p class="text-[10px] text-stone-400 truncate mt-1">${link.url}</p>
+                        </div>
+                    </a>
+                    <button onclick="deleteLink(${link.id})" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-white/80 backdrop-blur rounded-full text-pink-200 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all shadow-sm border border-pink-50"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function renderAll() {
+            renderTimetable();
+            renderTodos();
+            renderMemos();
+            renderLinks();
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAll();
+        });
+    </script>
+</body>
+</html>
